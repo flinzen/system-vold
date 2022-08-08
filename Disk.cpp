@@ -268,6 +268,7 @@ status_t Disk::readPartitions() {
 
     Table table = Table::kUnknown;
     bool foundParts = false;
+    int partsCnt = 0;
     for (auto line : output) {
         char* cline = (char*) line.c_str();
         char* token = strtok(cline, kSgdiskToken);
@@ -295,9 +296,11 @@ status_t Disk::readPartitions() {
 
                 switch (strtol(type, nullptr, 16)) {
                 case 0x06: // FAT16
+                case 0x07: // exFAT
                 case 0x0b: // W95 FAT32 (LBA)
                 case 0x0c: // W95 FAT32 (LBA)
                 case 0x0e: // W95 FAT16 (LBA)
+                    partsCnt |= 1;
                     createPublicVolume(partDevice);
                     break;
                 }
@@ -315,7 +318,7 @@ status_t Disk::readPartitions() {
     }
 
     // Ugly last ditch effort, treat entire disk as partition
-    if (table == Table::kUnknown || !foundParts) {
+    if (table == Table::kUnknown || !foundParts || partsCnt == 0) {
         LOG(WARNING) << mId << " has unknown partition table; trying entire device";
 
         std::string fsType;
